@@ -27,6 +27,7 @@ from models.modeling import VisionTransformer, CONFIGS
 from utils.scheduler import WarmupLinearSchedule, WarmupCosineSchedule
 from utils.dataset_stanford_KD import get_loader_KD
 from utils.dist_util import get_world_size
+import torchmetrics
 
 logger = logging.getLogger(__name__)
 
@@ -277,7 +278,8 @@ def train(args, model_teacher, model_student):
     model_student.zero_grad()
     set_seed(args)  # Added here for reproducibility (even between python 2 and 3)
     losses = AverageMeter()
-    acc_train = AverageMeter()
+    # acc_train = AverageMeter()
+    accuracy_train = torchmetrics.Accuracy().cuda()
     # global_step, best_acc = 0, 0
     while True:
         model_teacher.eval()
@@ -296,7 +298,8 @@ def train(args, model_teacher, model_student):
                 output_teacher, _ = model_teacher(x1)
             output_student = model_student(x2)
             loss = loss_fn_kd(output_student, y, output_teacher, 0.6, 10)
-            accuracy_train = accuracy_classification(output_student, y)
+            # accuracy_train = accuracy_classification(output_student, y)
+            accuracy(output_student.softmax(dim=-1), y)
 
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
@@ -309,7 +312,8 @@ def train(args, model_teacher, model_student):
 
             if (step + 1) % args.gradient_accumulation_steps == 0:
                 losses.update(loss.item() * args.gradient_accumulation_steps)
-                acc_train.update(accuracy_train * args.gradient_accumulation_steps)
+                # acc_train.update(accuracy_train * args.gradient_accumulation_steps)
+                acc_train = accuracy_train.compute()
                 if args.fp16:
                     torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), args.max_grad_norm)
                 else:
@@ -319,9 +323,13 @@ def train(args, model_teacher, model_student):
                 scheduler.step()
                 global_step += 1
 
+                # epoch_iterator.set_description(
+                #     "Training (%d / %d Steps) (loss=%2.5f) (accuracy=%2.5f)" % (global_step, t_total, losses.val,
+                #                                                                 acc_train.val)
+                # )
                 epoch_iterator.set_description(
                     "Training (%d / %d Steps) (loss=%2.5f) (accuracy=%2.5f)" % (global_step, t_total, losses.val,
-                                                                                acc_train.val)
+                                                                                acc_train.item())
                 )
                 if args.local_rank in [-1, 0]:
                     writer.add_scalar("train/loss", scalar_value=losses.val, global_step=global_step)
