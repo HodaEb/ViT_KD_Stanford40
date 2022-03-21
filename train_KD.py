@@ -20,8 +20,8 @@ from torchvision.models import resnext50_32x4d
 
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
-# from apex import amp
-# from apex.parallel import DistributedDataParallel as DDP
+from apex import amp
+from apex.parallel import DistributedDataParallel as DDP
 
 from models.modeling import VisionTransformer, CONFIGS
 from utils.scheduler import WarmupLinearSchedule, WarmupCosineSchedule
