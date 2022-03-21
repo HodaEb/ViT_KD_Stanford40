@@ -232,6 +232,7 @@ def valid(args, model, writer, test_loader, global_step):
 
 def train(args, model_teacher, model_student):
     """ Train the model """
+    model_student.to(args.device)
     if args.local_rank in [-1, 0]:
         os.makedirs(args.output_dir, exist_ok=True)
         writer = SummaryWriter(log_dir=os.path.join("logs", args.name))
@@ -274,7 +275,6 @@ def train(args, model_teacher, model_student):
     global_step, best_acc = 0, 0
 
     model_student.zero_grad()
-    model_student.to(args.device)
     set_seed(args)  # Added here for reproducibility (even between python 2 and 3)
     losses = AverageMeter()
     acc_train = AverageMeter()
@@ -447,7 +447,7 @@ def main():
     # Model & Tokenizer Setup
     args, model_teacher = setup(args)
 
-    model_student = resnext50_32x4d(pretrained=False, progress=True)
+    model_student = resnext50_32x4d(pretrained=True, progress=True)
     model_student.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
     student_checkpoint_file = args.student_input_dir
     student_checkpoint = torch.load(student_checkpoint_file)
