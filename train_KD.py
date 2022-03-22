@@ -299,7 +299,7 @@ def train(args, model_teacher, model_student):
             output_student = model_student(x2)
             loss = loss_fn_kd(output_student, y, output_teacher, 0.6, 10)
             # accuracy_train = accuracy_classification(output_student, y)
-            accuracy(output_student.softmax(dim=-1), y)
+            accuracy_train(output_student.softmax(dim=-1), y)
 
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
