@@ -247,6 +247,10 @@ def train(args, model_teacher, model_student):
     optimizer = torch.optim.Adam(model_student.parameters(),
                                  lr=args.learning_rate,
                                  weight_decay=args.weight_decay)
+
+    checkpoint_file = args.student_input_dir
+    checkpoint_continue = torch.load(checkpoint_file)
+    optimizer.load_state_dict(checkpoint_continue['optimizer_state_dict'])
     t_total = args.num_steps
     if args.decay_type == "cosine":
         scheduler = WarmupCosineSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=t_total)
@@ -333,7 +337,8 @@ def train(args, model_teacher, model_student):
                 )
                 if args.local_rank in [-1, 0]:
                     writer.add_scalar("train/loss", scalar_value=losses.val, global_step=global_step)
-                    writer.add_scalar("train/acc", scalar_value=acc_train.val, global_step=global_step)
+                    # writer.add_scalar("train/acc", scalar_value=acc_train.val, global_step=global_step)
+                    writer.add_scalar("train/acc", scalar_value=acc_train.item(), global_step=global_step)
                     writer.add_scalar("train/lr", scalar_value=scheduler.get_last_lr()[0], global_step=global_step)
 
                 # save_checkpoint
@@ -384,8 +389,12 @@ def main():
                         default="/content/drive/MyDrive/ViT_weights_layer11_to_end/best_acc_step_500_acc_0.9063629790310919_checkpoint.pth",
                         type=str,
                         help="The output directory where checkpoints will be written.")
+    # parser.add_argument("--student_input_dir",
+    #                     default="/content/drive/MyDrive/ResNeXT/Copy of ckpt30.pth",
+    #                     type=str,
+    #                     help="The output directory where checkpoints will be written.")
     parser.add_argument("--student_input_dir",
-                        default="/content/drive/MyDrive/ResNeXT/Copy of ckpt30.pth",
+                        default="/content/drive/MyDrive/KD_First_weights/KD_ResNext_ViT_weights/best_acc_step_800_acc_0.8335140997830802_checkpoint.pth",
                         type=str,
                         help="The output directory where checkpoints will be written.")
     parser.add_argument("--img_size", default=224, type=int,
@@ -457,12 +466,12 @@ def main():
 
     model_student = resnext50_32x4d(pretrained=True, progress=True)
     model_student.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
-    student_checkpoint_file = args.student_input_dir
-    student_checkpoint = torch.load(student_checkpoint_file)
-    if 'model' in student_checkpoint.keys():
-        model_student.load_state_dict(student_checkpoint['model'])
-    else:
-        model_student.load_state_dict(student_checkpoint)
+    # student_checkpoint_file = args.student_input_dir
+    # student_checkpoint = torch.load(student_checkpoint_file)
+    # if 'model' in student_checkpoint.keys():
+    #     model_student.load_state_dict(student_checkpoint['model'])
+    # else:
+    #     model_student.load_state_dict(student_checkpoint)
     lay4 = list(model_student.layer4)
     channel0_1 = ChannelAttention(2048, 16)
     spatial0_1 = SpatialAttention()
@@ -473,6 +482,15 @@ def main():
     layer4_new = [lay4[0], channel0_1, spatial0_1, lay4[1], channel1_1, spatial1_1,
                   lay4[2], channel2_1, spatial2_1]
     model_student.layer4 = nn.Sequential(*layer4_new)
+    student_checkpoint_file = args.student_input_dir
+    student_checkpoint = torch.load(student_checkpoint_file)
+    if 'model_state_dict' in student_checkpoint.keys():
+        model_student.load_state_dict(student_checkpoint['model_state_dict'])
+        logger.info('loaded student weights from {}'.format(args.student_input_dir))
+    else:
+        model_student.load_state_dict(student_checkpoint)
+        logger.info('loaded student weights from {}'.format(args.student_input_dir))
+
 
     # Training
     train(args, model_teacher, model_student)
