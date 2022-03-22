@@ -248,9 +248,9 @@ def train(args, model_teacher, model_student):
                                  lr=args.learning_rate,
                                  weight_decay=args.weight_decay)
 
-    checkpoint_file = args.student_input_dir
-    checkpoint_continue = torch.load(checkpoint_file)
-    optimizer.load_state_dict(checkpoint_continue['optimizer_state_dict'])
+    # checkpoint_file = args.student_input_dir
+    # checkpoint_continue = torch.load(checkpoint_file)
+    # optimizer.load_state_dict(checkpoint_continue['optimizer_state_dict'])
     
 
     t_total = args.num_steps
@@ -286,6 +286,7 @@ def train(args, model_teacher, model_student):
     losses = AverageMeter()
     # acc_train = AverageMeter()
     accuracy_train = torchmetrics.Accuracy().cuda()
+    accuracy_train_teacher = torchmetrics.Accuracy().cuda()
     # global_step, best_acc = 0, 0
     while True:
         model_teacher.eval()
@@ -306,10 +307,13 @@ def train(args, model_teacher, model_student):
             loss = loss_fn_kd(output_student, y, output_teacher, 0.6, 10)
             # accuracy_train = accuracy_classification(output_student, y)
             accuracy_train(output_student.softmax(dim=-1), y)
+            accuracy_train_teacher(output_teacher.softmax(dim=-1), y)
 
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
                 accuracy_train = accuracy_train / args.gradient_accumulation_steps
+                accuracy_train_teacher = accuracy_train_teacher / args.gradient_accumulation_steps
+
             if args.fp16:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
                     scaled_loss.backward()
@@ -320,6 +324,7 @@ def train(args, model_teacher, model_student):
                 losses.update(loss.item() * args.gradient_accumulation_steps)
                 # acc_train.update(accuracy_train * args.gradient_accumulation_steps)
                 acc_train = accuracy_train.compute()
+                acc_train_teacher = accuracy_train_teacher.compute()
                 if args.fp16:
                     torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), args.max_grad_norm)
                 else:
@@ -334,13 +339,14 @@ def train(args, model_teacher, model_student):
                 #                                                                 acc_train.val)
                 # )
                 epoch_iterator.set_description(
-                    "Training (%d / %d Steps) (loss=%2.5f) (accuracy=%2.5f)" % (global_step, t_total, losses.val,
-                                                                                acc_train.item())
+                    "Training (%d / %d Steps) (loss=%2.5f) (accuracy=%2.5f)(teacher_acc=%2.5f)" % (global_step, t_total, losses.val,
+                                                                                acc_train.item(), acc_train_teacher.item())
                 )
                 if args.local_rank in [-1, 0]:
                     writer.add_scalar("train/loss", scalar_value=losses.val, global_step=global_step)
                     # writer.add_scalar("train/acc", scalar_value=acc_train.val, global_step=global_step)
                     writer.add_scalar("train/acc", scalar_value=acc_train.item(), global_step=global_step)
+                    writer.add_scalar("train/acc_teacher", scalar_value=acc_train_teacher.item(), global_step=global_step)
                     writer.add_scalar("train/lr", scalar_value=scheduler.get_last_lr()[0], global_step=global_step)
 
                 # save_checkpoint
@@ -396,7 +402,7 @@ def main():
     #                     type=str,
     #                     help="The output directory where checkpoints will be written.")
     parser.add_argument("--student_input_dir",
-                        default="/content/drive/MyDrive/KD_First_weights/KD_ResNext_ViT_weights/best_acc_step_800_acc_0.8335140997830802_checkpoint.pth",
+                        default="/content/drive/MyDrive/KD_ResNext_ViT_weights/best_acc_step_2400_acc_0.8521330441070137_checkpoint.pth",
                         type=str,
                         help="The output directory where checkpoints will be written.")
     parser.add_argument("--img_size", default=224, type=int,
