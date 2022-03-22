@@ -304,7 +304,8 @@ def train(args, model_teacher, model_student):
             with torch.no_grad():
                 output_teacher, _ = model_teacher(x1)
             output_student = model_student(x2)
-            loss = loss_fn_kd(output_student, y, output_teacher, 0.6, 10)
+            # loss = loss_fn_kd(output_student, y, output_teacher, 0.6, 10)
+            loss = loss_fn_kd(output_student, y, output_teacher, 0.6, 15)
             # accuracy_train = accuracy_classification(output_student, y)
             accuracy_train(output_student.softmax(dim=-1), y)
             accuracy_train_teacher(output_teacher.softmax(dim=-1), y)
@@ -402,7 +403,7 @@ def main():
     #                     type=str,
     #                     help="The output directory where checkpoints will be written.")
     parser.add_argument("--student_input_dir",
-                        default="/content/drive/MyDrive/KD_ResNext_ViT_weights/best_acc_step_2400_acc_0.8521330441070137_checkpoint.pth",
+                        default="/content/drive/MyDrive/KD_First_weights/KD_ResNext_ViT_weights/ckpt1_acc_0.8617136478424072.pth",
                         type=str,
                         help="The output directory where checkpoints will be written.")
     parser.add_argument("--img_size", default=224, type=int,
@@ -494,6 +495,9 @@ def main():
     student_checkpoint = torch.load(student_checkpoint_file)
     if 'model_state_dict' in student_checkpoint.keys():
         model_student.load_state_dict(student_checkpoint['model_state_dict'])
+        logger.info('loaded student weights from {}'.format(args.student_input_dir))
+    elif 'model' in student_checkpoint.keys():
+        model_student.load_state_dict(student_checkpoint['model'])
         logger.info('loaded student weights from {}'.format(args.student_input_dir))
     else:
         model_student.load_state_dict(student_checkpoint)
