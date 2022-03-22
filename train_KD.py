@@ -20,8 +20,8 @@ from torchvision.models import resnext50_32x4d
 
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
-from apex import amp
-from apex.parallel import DistributedDataParallel as DDP
+# from apex import amp
+# from apex.parallel import DistributedDataParallel as DDP
 
 from models.modeling import VisionTransformer, CONFIGS
 from utils.scheduler import WarmupLinearSchedule, WarmupCosineSchedule
@@ -39,7 +39,7 @@ def loss_fn_kd(outputs, labels, teacher_outputs, alpha, T):
     NOTE: the KL Divergence for PyTorch comparing the softmaxs of teacher
     and student expects the input tensor to be log probabilities! See Issue #2
     """
-    KD_loss = nn.KLDivLoss()(F.log_softmax(outputs / T, dim=1),
+    KD_loss = nn.KLDivLoss(reduction='batchmean')(F.log_softmax(outputs / T, dim=1),
                              F.softmax(teacher_outputs / T, dim=1)) * (alpha * T * T) + \
               F.cross_entropy(outputs, labels) * (1. - alpha)
 
@@ -251,6 +251,8 @@ def train(args, model_teacher, model_student):
     checkpoint_file = args.student_input_dir
     checkpoint_continue = torch.load(checkpoint_file)
     optimizer.load_state_dict(checkpoint_continue['optimizer_state_dict'])
+    
+
     t_total = args.num_steps
     if args.decay_type == "cosine":
         scheduler = WarmupCosineSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=t_total)
