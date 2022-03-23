@@ -79,6 +79,66 @@ class SpatialAttention(nn.Module):
         out = self.conv1(out)
         return (self.sigmoid(out).expand_as(x) + 1) * x
 
+class EnsembleModel(nn.Module):
+  def __init__(self):
+    super(EnsembleModel, self).__init__()
+    # self.models = []
+    self.k = 2
+    # first model
+    model_1 = resnext50_32x4d(pretrained=True, progress=True)
+    model_1.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
+    lay4 = list(model_1.layer4)
+    channel0_1 = ChannelAttention(2048,16)
+    spatial0_1 = SpatialAttention()
+    # bn0_1 = nn.BatchNorm2d(2048)
+    channel1_1 = ChannelAttention(2048,16)
+    spatial1_1 = SpatialAttention()
+    # bn1_1 = nn.BatchNorm2d(2048)
+    channel2_1 = ChannelAttention(2048,16)
+    spatial2_1 = SpatialAttention()
+    # bn2_1 = nn.BatchNorm2d(2048)
+    # layer4_new = [lay4[0], channel0_1, spatial0_1, bn0_1, lay4[1], channel1_1, spatial1_1, bn1_1, lay4[2], channel2_1, spatial2_1, bn2_1]
+    layer4_new = [lay4[0], channel0_1, spatial0_1, lay4[1], channel1_1, spatial1_1, lay4[2], channel2_1, spatial2_1]
+    model_1.layer4 = nn.Sequential(*layer4_new)
+    ckpt_1 = torch.load('/content/drive/MyDrive/KD_ResNext_ViT_weights/best_acc_step_800_acc_0.8533984092552422_checkpoint.pth')
+    model_1.load_state_dict(ckpt_1['model_state_dict'], strict=True)
+    logger.info('acc of the first model is {}.'.format(ckpt_1['best_accuracy']))
+    self.model_1 = model_1
+
+    # second model
+    model_2 = resnext50_32x4d(pretrained=True, progress=True)
+    model_2.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
+    ckpt_2 = torch.load('/content/drive/MyDrive/ResNeXT/Copy of ckpt30.pth')
+    model_2.load_state_dict(ckpt_2['model'], strict= True)
+    logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
+    lay4 = list(model_2.layer4)
+    channel0 = ChannelAttention(2048,16)
+    spatial0 = SpatialAttention()
+    # bn0_2 = nn.BatchNorm2d(2048)
+    channel1 = ChannelAttention(2048,16)
+    spatial1 = SpatialAttention()
+    # bn1_2 = nn.BatchNorm2d(2048)
+    channel2 = ChannelAttention(2048,16)
+    spatial2 = SpatialAttention()
+    # bn2_2 = nn.BatchNorm2d(2048)
+    # layer4_new = [lay4[0], channel0, spatial0, bn0_2, lay4[1], channel1, spatial1, bn1_2, lay4[2], channel2, spatial2, bn2_2]
+    layer4_new = [lay4[0], channel0, spatial0, lay4[1], channel1, spatial1, lay4[2], channel2, spatial2]
+    model_2.layer4 = nn.Sequential(*layer4_new)
+    # ckpt_2 = torch.load('/content/drive/MyDrive/KD_First_weights/KD_ResNext_ViT_weights/ckpt1_acc_0.8617136478424072.pth')
+    # model_2.load_state_dict(ckpt_2['model'], strict=False)
+    # logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
+    self.model_2 = model_2
+    self.relu_last = nn.ReLU()
+    self.classifier = nn.Linear(80, 40, True)
+
+  def forward(self, x):
+    x1 = self.model_1(x)
+    x2 = self.model_2(x)
+    y = torch.cat((x1, x2), dim=1)
+    # print(y.shape)
+    y = self.classifier(self.relu_last(y))
+    # y = torch.stack((x1, x2), dim = 1).mean(dim = 1)
+    return y
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -353,7 +413,8 @@ def train(args, model_teacher, model_student):
                 # save_checkpoint
                 # save_model_complete(args, model, optimizer, accuracy = None, step = global_step)
 
-                if global_step % args.eval_every == 0 and args.local_rank in [-1, 0]:
+                # if global_step % args.eval_every == 0 and args.local_rank in [-1, 0]:
+                if global_step % (4000 / 8) == 0 and args.local_rank in [-1, 0]:
                     # logger.info("Train Accuracy: %2.5f" % acc_train.val)
                     # logger.info("Train loss: %2.5f" % losses.val)
                     accuracy = valid(args, model_student, writer, test_loader, global_step)
@@ -473,36 +534,43 @@ def main():
     # Model & Tokenizer Setup
     args, model_teacher = setup(args)
 
-    model_student = resnext50_32x4d(pretrained=True, progress=True)
-    model_student.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
+    # model_student = resnext50_32x4d(pretrained=True, progress=True)
+    # model_student.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
+    # # student_checkpoint_file = args.student_input_dir
+    # # student_checkpoint = torch.load(student_checkpoint_file)
+    # # if 'model' in student_checkpoint.keys():
+    # #     model_student.load_state_dict(student_checkpoint['model'])
+    # # else:
+    # #     model_student.load_state_dict(student_checkpoint)
+    # lay4 = list(model_student.layer4)
+    # channel0_1 = ChannelAttention(2048, 16)
+    # spatial0_1 = SpatialAttention()
+    # channel1_1 = ChannelAttention(2048, 16)
+    # spatial1_1 = SpatialAttention()
+    # channel2_1 = ChannelAttention(2048, 16)
+    # spatial2_1 = SpatialAttention()
+    # layer4_new = [lay4[0], channel0_1, spatial0_1, lay4[1], channel1_1, spatial1_1,
+    #               lay4[2], channel2_1, spatial2_1]
+    # model_student.layer4 = nn.Sequential(*layer4_new)
     # student_checkpoint_file = args.student_input_dir
     # student_checkpoint = torch.load(student_checkpoint_file)
-    # if 'model' in student_checkpoint.keys():
+    # if 'model_state_dict' in student_checkpoint.keys():
+    #     model_student.load_state_dict(student_checkpoint['model_state_dict'])
+    #     logger.info('loaded student weights from {}'.format(args.student_input_dir))
+    # elif 'model' in student_checkpoint.keys():
     #     model_student.load_state_dict(student_checkpoint['model'])
+    #     logger.info('loaded student weights from {}'.format(args.student_input_dir))
     # else:
     #     model_student.load_state_dict(student_checkpoint)
-    lay4 = list(model_student.layer4)
-    channel0_1 = ChannelAttention(2048, 16)
-    spatial0_1 = SpatialAttention()
-    channel1_1 = ChannelAttention(2048, 16)
-    spatial1_1 = SpatialAttention()
-    channel2_1 = ChannelAttention(2048, 16)
-    spatial2_1 = SpatialAttention()
-    layer4_new = [lay4[0], channel0_1, spatial0_1, lay4[1], channel1_1, spatial1_1,
-                  lay4[2], channel2_1, spatial2_1]
-    model_student.layer4 = nn.Sequential(*layer4_new)
-    student_checkpoint_file = args.student_input_dir
-    student_checkpoint = torch.load(student_checkpoint_file)
-    if 'model_state_dict' in student_checkpoint.keys():
-        model_student.load_state_dict(student_checkpoint['model_state_dict'])
-        logger.info('loaded student weights from {}'.format(args.student_input_dir))
-    elif 'model' in student_checkpoint.keys():
-        model_student.load_state_dict(student_checkpoint['model'])
-        logger.info('loaded student weights from {}'.format(args.student_input_dir))
-    else:
-        model_student.load_state_dict(student_checkpoint)
-        logger.info('loaded student weights from {}'.format(args.student_input_dir))
-
+    #     logger.info('loaded student weights from {}'.format(args.student_input_dir))
+    model_student = EnsembleModel()
+    for name, param in model_student.named_parameters():
+      # if 'fc' in name or 'classifier' in name or 'senet' in name: #or 'layer3' in name:
+      #   logger.info(name)
+      #   param.requires_grad_(True)
+      # else:
+      #   param.requires_grad_(False)
+      param.requires_grad_(True)
 
     # Training
     train(args, model_teacher, model_student)
