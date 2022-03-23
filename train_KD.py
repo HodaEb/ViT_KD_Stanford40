@@ -100,17 +100,17 @@ class EnsembleModel(nn.Module):
     # layer4_new = [lay4[0], channel0_1, spatial0_1, bn0_1, lay4[1], channel1_1, spatial1_1, bn1_1, lay4[2], channel2_1, spatial2_1, bn2_1]
     layer4_new = [lay4[0], channel0_1, spatial0_1, lay4[1], channel1_1, spatial1_1, lay4[2], channel2_1, spatial2_1]
     model_1.layer4 = nn.Sequential(*layer4_new)
-    ckpt_1 = torch.load('/content/drive/MyDrive/KD_ResNext_ViT_weights/best_acc_step_800_acc_0.8533984092552422_checkpoint.pth')
-    model_1.load_state_dict(ckpt_1['model_state_dict'], strict=True)
-    logger.info('acc of the first model is {}.'.format(ckpt_1['best_accuracy']))
+    # ckpt_1 = torch.load('/content/drive/MyDrive/KD_ResNext_ViT_weights/best_acc_step_800_acc_0.8533984092552422_checkpoint.pth')
+    # model_1.load_state_dict(ckpt_1['model_state_dict'], strict=True)
+    # logger.info('acc of the first model is {}.'.format(ckpt_1['best_accuracy']))
     self.model_1 = model_1
 
     # second model
     model_2 = resnext50_32x4d(pretrained=True, progress=True)
     model_2.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
-    ckpt_2 = torch.load('/content/drive/MyDrive/ResNeXT/Copy of ckpt30.pth')
-    model_2.load_state_dict(ckpt_2['model'], strict= True)
-    logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
+    # ckpt_2 = torch.load('/content/drive/MyDrive/ResNeXT/Copy of ckpt30.pth')
+    # model_2.load_state_dict(ckpt_2['model'], strict= True)
+    # logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
     lay4 = list(model_2.layer4)
     channel0 = ChannelAttention(2048,16)
     spatial0 = SpatialAttention()
@@ -365,7 +365,7 @@ def train(args, model_teacher, model_student):
                 output_teacher, _ = model_teacher(x1)
             output_student = model_student(x2)
             # loss = loss_fn_kd(output_student, y, output_teacher, 0.6, 10)
-            loss = loss_fn_kd(output_student, y, output_teacher, 0.6, 15)
+            loss = loss_fn_kd(output_student, y, output_teacher, 0.6, 10)
             # accuracy_train = accuracy_classification(output_student, y)
             accuracy_train(output_student.softmax(dim=-1), y)
             accuracy_train_teacher(output_teacher.softmax(dim=-1), y)
@@ -418,7 +418,6 @@ def train(args, model_teacher, model_student):
                     # logger.info("Train Accuracy: %2.5f" % acc_train.val)
                     # logger.info("Train loss: %2.5f" % losses.val)
                     accuracy = valid(args, model_student, writer, test_loader, global_step)
-                    writer.add_scalar("test/acc", scalar_value=accuracy, global_step=global_step)
 
                     if best_acc < accuracy:
                         save_model_complete(args, model_student, optimizer, accuracy, global_step)
@@ -450,7 +449,7 @@ def main():
                         help="Which variant to use.")
     parser.add_argument("--pretrained_dir", type=str, default="checkpoint/ViT-B_16.npz",
                         help="Where to search for pretrained ViT models.")
-    parser.add_argument("--output_dir", default="/content/drive/MyDrive/KD_ResNext_ViT_weights", type=str,
+    parser.add_argument("--output_dir", default="/content/TrainedModels", type=str,
                         help="The output directory where checkpoints will be written.")
     parser.add_argument("--output_dir_every_checkpoint",
                         default="/content/", type=str,
