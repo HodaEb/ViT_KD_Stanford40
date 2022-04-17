@@ -958,8 +958,19 @@ def main():
         num_classes = 100
 
     model = EnsembleModel_resnext_vit(args, config, args.img_size, zero_head=True, num_classes=num_classes)
+    # for name, param in model.named_parameters():
+    #   param.requires_grad_(True)
+
     for name, param in model.named_parameters():
-      param.requires_grad_(True)
+
+        if 'last_fc' in name:
+            param.requires_grad_(True)
+        elif 'model_2' in name:
+            param.requires_grad_(False)
+        elif 'model_1' in name:
+            param.requires_grad_(False)
+        else:
+            param.requires_grad_(False)
 
     # Training
     train(args, model)
