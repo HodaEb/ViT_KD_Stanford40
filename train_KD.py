@@ -141,54 +141,114 @@ class EnsembleModel(nn.Module):
     return y
 
 
+# class EnsembleModel_resnext_vit(nn.Module):
+#   def __init__(self, args, config, img_size=224, zero_head=True, num_classes=40):
+#     super().__init__()
+#     self.k = 2
+#     # first model
+#     model_1 = VisionTransformer(config, img_size, zero_head=True, num_classes=num_classes)
+#     checkpoint_file = args.input_dir
+#     checkpoint = torch.load(checkpoint_file)
+#     if 'model_state_dict' in checkpoint.keys():
+#         model_1.load_state_dict(checkpoint['model_state_dict'])
+#     else:
+#         model_1.load_state_dict(checkpoint)
+#     self.model_1 = model_1
+
+#     # second model
+#     model_2 = resnext50_32x4d(pretrained=True, progress=True)
+#     model_2.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
+#     # ckpt_2 = torch.load('/content/drive/MyDrive/ResNeXT/Copy of ckpt30.pth')
+#     # model_2.load_state_dict(ckpt_2['model'], strict= True)
+#     # logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
+#     lay4 = list(model_2.layer4)
+#     channel0 = ChannelAttention(2048,16)
+#     spatial0 = SpatialAttention()
+#     # bn0_2 = nn.BatchNorm2d(2048)
+#     channel1 = ChannelAttention(2048,16)
+#     spatial1 = SpatialAttention()
+#     # bn1_2 = nn.BatchNorm2d(2048)
+#     channel2 = ChannelAttention(2048,16)
+#     spatial2 = SpatialAttention()
+#     # bn2_2 = nn.BatchNorm2d(2048)
+#     # layer4_new = [lay4[0], channel0, spatial0, bn0_2, lay4[1], channel1, spatial1, bn1_2, lay4[2], channel2, spatial2, bn2_2]
+#     layer4_new = [lay4[0], channel0, spatial0, lay4[1], channel1, spatial1, lay4[2], channel2, spatial2]
+#     model_2.layer4 = nn.Sequential(*layer4_new)
+#     # ckpt_2 = torch.load('/content/drive/MyDrive/KD_First_weights/KD_ResNext_ViT_weights/ckpt1_acc_0.8617136478424072.pth')
+#     ckpt_2 = torch.load('/content/drive/MyDrive/ResNext_cbam/TrainedModels/ResNext_cbam/Adam/_lr_1e-06/_wd_0.0/ckpt164_acc_0.8781633973121643.pth')
+#     model_2.load_state_dict(ckpt_2['model'], strict=False)
+#     logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
+#     self.model_2 = model_2
+#     self.relu_last = nn.ReLU()
+#     self.classifier = nn.Linear(80, 40, True)
+
+#   def forward(self, x1, x2):
+#     y1, _ = self.model_1(x1)
+#     y2 = self.model_2(x2)
+#     y = torch.cat((y1, y2), dim=1)
+#     # print(y.shape)
+#     y = self.classifier(self.relu_last(y))
+#     # y = torch.stack((y1, y2), dim = 1).mean(dim = 1)
+#     return y
+
 class EnsembleModel_resnext_vit(nn.Module):
-  def __init__(self, args, config, img_size=224, zero_head=True, num_classes=40):
-    super().__init__()
-    self.k = 2
-    # first model
-    model_1 = VisionTransformer(config, img_size, zero_head=True, num_classes=num_classes)
-    checkpoint_file = args.input_dir
-    checkpoint = torch.load(checkpoint_file)
-    if 'model_state_dict' in checkpoint.keys():
-        model_1.load_state_dict(checkpoint['model_state_dict'])
-    else:
-        model_1.load_state_dict(checkpoint)
-    self.model_1 = model_1
+    def __init__(self, args, config, img_size=224, zero_head=True, num_classes=40):
+        super().__init__()
+        self.k = 2
+        # first model
+        model_1 = VisionTransformer(config, img_size, zero_head=True, num_classes=num_classes)
+        checkpoint_file = args.input_dir
+        checkpoint = torch.load(checkpoint_file)
+        if 'model_state_dict' in checkpoint.keys():
+            model_1.load_state_dict(checkpoint['model_state_dict'], strict=False)
+        else:
+            model_1.load_state_dict(checkpoint, strict=False)
+        self.model_1 = model_1
 
-    # second model
-    model_2 = resnext50_32x4d(pretrained=True, progress=True)
-    model_2.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
-    # ckpt_2 = torch.load('/content/drive/MyDrive/ResNeXT/Copy of ckpt30.pth')
-    # model_2.load_state_dict(ckpt_2['model'], strict= True)
-    # logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
-    lay4 = list(model_2.layer4)
-    channel0 = ChannelAttention(2048,16)
-    spatial0 = SpatialAttention()
-    # bn0_2 = nn.BatchNorm2d(2048)
-    channel1 = ChannelAttention(2048,16)
-    spatial1 = SpatialAttention()
-    # bn1_2 = nn.BatchNorm2d(2048)
-    channel2 = ChannelAttention(2048,16)
-    spatial2 = SpatialAttention()
-    # bn2_2 = nn.BatchNorm2d(2048)
-    # layer4_new = [lay4[0], channel0, spatial0, bn0_2, lay4[1], channel1, spatial1, bn1_2, lay4[2], channel2, spatial2, bn2_2]
-    layer4_new = [lay4[0], channel0, spatial0, lay4[1], channel1, spatial1, lay4[2], channel2, spatial2]
-    model_2.layer4 = nn.Sequential(*layer4_new)
-    ckpt_2 = torch.load('/content/drive/MyDrive/KD_First_weights/KD_ResNext_ViT_weights/ckpt1_acc_0.8617136478424072.pth')
-    model_2.load_state_dict(ckpt_2['model'], strict=False)
-    logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
-    self.model_2 = model_2
-    self.relu_last = nn.ReLU()
-    self.classifier = nn.Linear(80, 40, True)
+        # second model
+        model_2 = resnext50_32x4d(pretrained=True, progress=True)
+        # model_2.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
+        model_2.fc = nn.Identity()
+        # ckpt_2 = torch.load('/content/drive/MyDrive/ResNeXT/Copy of ckpt30.pth')
+        # model_2.load_state_dict(ckpt_2['model'], strict= True)
+        # logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
+        lay4 = list(model_2.layer4)
+        channel0 = ChannelAttention(2048, 16)
+        spatial0 = SpatialAttention()
+        # bn0_2 = nn.BatchNorm2d(2048)
+        channel1 = ChannelAttention(2048, 16)
+        spatial1 = SpatialAttention()
+        # bn1_2 = nn.BatchNorm2d(2048)
+        channel2 = ChannelAttention(2048, 16)
+        spatial2 = SpatialAttention()
+        # bn2_2 = nn.BatchNorm2d(2048)
+        # layer4_new = [lay4[0], channel0, spatial0, bn0_2, lay4[1], channel1, spatial1, bn1_2, lay4[2], channel2, spatial2, bn2_2]
+        layer4_new = [lay4[0], channel0, spatial0, lay4[1], channel1, spatial1, lay4[2], channel2, spatial2]
+        model_2.layer4 = nn.Sequential(*layer4_new)
+        ckpt_2 = torch.load(
+            '/content/drive/MyDrive/ResNext_cbam/TrainedModels/ResNext_cbam/Adam/_lr_1e-06/_wd_0.0/ckpt164_acc_0.8781633973121643.pth')
+        model_2.load_state_dict(ckpt_2['model'], strict=False)
+        logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
+        self.model_2 = model_2
+        
+        self.last_fc_1 = nn.Linear(2048 + 768, 500, True)
+        self.relu_last = nn.Sigmoid()
+        self.last_fc_2 = nn.Linear(500, 40, True)
 
-  def forward(self, x1, x2):
-    y1, _ = self.model_1(x1)
-    y2 = self.model_2(x2)
-    y = torch.cat((y1, y2), dim=1)
-    # print(y.shape)
-    y = self.classifier(self.relu_last(y))
-    # y = torch.stack((y1, y2), dim = 1).mean(dim = 1)
-    return y
+
+    def forward(self, x1, x2):
+        y1, _ = self.model_1(x1)
+        # print(y1.shape)
+        y2 = self.model_2(x2)
+        # print(y2.shape,'   ',x2.shape)
+        y = torch.cat((y1, y2), dim=1)
+        # print(y.shape)
+        # y = self.classifier(self.relu_last(y))
+        y = self.last_fc_2(self.relu_last(self.last_fc_1(y)))
+        # y = self.last_fc_2(self.last_fc_1(y))
+
+        # y = torch.stack((y1, y2), dim = 1).mean(dim = 1)
+        return y
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -832,7 +892,9 @@ def main():
 
     # parser.add_argument("--learning_rate", default=3e-2, type=float,
     #                     help="The initial learning rate for SGD.")
-    parser.add_argument("--learning_rate", default=1e-5, type=float,
+    # parser.add_argument("--learning_rate", default=1e-5, type=float,
+    #                     help="The initial learning rate for SGD.")
+    parser.add_argument("--learning_rate", default=1e-6, type=float,
                         help="The initial learning rate for SGD.")
     parser.add_argument("--weight_decay", default=0, type=float,
                         help="Weight decay if we apply some.")
