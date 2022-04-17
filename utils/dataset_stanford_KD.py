@@ -118,16 +118,6 @@ def get_loader_KD(args):
     # ])
 
     student_transform_train = transforms.Compose([
-    # transforms.RandomResizedCrop((224, 224)),
-    # transforms.RandomHorizontalFlip(p=0.5),
-    # transforms.RandomVerticalFlip(p=0.5),
-    # transforms.RandomApply([
-    #   transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8
-    # ),
-    # transforms.RandomGrayscale(0.2),
-    # transforms.ToTensor(),
-    # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-
     # transforms.Resize((224, 224)),
     # transforms.CenterCrop((224, 224)),
 
@@ -136,16 +126,15 @@ def get_loader_KD(args):
 
     transforms.Resize((320, 320)),
     transforms.CenterCrop((320, 320)),
-
-    transforms.RandomResizedCrop(size=(320, 320), scale=(0.7, 1.0), ratio=(0.75, 1.3333333333333333)),
+    # transforms.RandomResizedCrop(size=(320, 320), scale=(0.6, 1.0), ratio=(0.75, 1.0)),
     transforms.RandomHorizontalFlip(),
     # transforms.RandomVerticalFlip(),
     # transforms.RandomRotation(degrees =(0, 10)),
     transforms.RandomRotation(degrees =(0, 23)),
-    transforms.RandomApply([
-      transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8
-    ),
-    # transforms.RandomGrayscale(0.2),
+    # transforms.RandomApply([
+    #   transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8
+    # ),
+    transforms.RandomGrayscale(0.2),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
