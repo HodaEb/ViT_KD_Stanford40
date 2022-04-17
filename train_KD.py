@@ -594,6 +594,10 @@ def train(args, model):
                                  lr=args.learning_rate,
                                  weight_decay=args.weight_decay)
 
+    # optimizer = torch.optim.SGD(model.parameters(),
+    #                              lr=args.learning_rate,
+    #                              weight_decay=args.weight_decay)
+
     # checkpoint_file = args.student_input_dir
     # checkpoint_continue = torch.load(checkpoint_file)
     # optimizer.load_state_dict(checkpoint_continue['optimizer_state_dict'])
@@ -892,10 +896,10 @@ def main():
 
     # parser.add_argument("--learning_rate", default=3e-2, type=float,
     #                     help="The initial learning rate for SGD.")
-    # parser.add_argument("--learning_rate", default=1e-5, type=float,
-    #                     help="The initial learning rate for SGD.")
-    parser.add_argument("--learning_rate", default=1e-6, type=float,
+    parser.add_argument("--learning_rate", default=1e-5, type=float,
                         help="The initial learning rate for SGD.")
+    # parser.add_argument("--learning_rate", default=1e-4, type=float,
+    #                     help="The initial learning rate for SGD.")
     parser.add_argument("--weight_decay", default=0, type=float,
                         help="Weight decay if we apply some.")
     parser.add_argument("--num_steps", default=10000, type=int,
@@ -971,6 +975,7 @@ def main():
             param.requires_grad_(False)
         else:
             param.requires_grad_(False)
+        # param.requires_grad_(True)
 
     # Training
     train(args, model)
