@@ -6,6 +6,8 @@ import argparse
 import os
 import random
 import numpy as np
+import torchnet as tnt
+
 
 from datetime import timedelta
 
@@ -579,7 +581,7 @@ def valid(args, model, writer, test_loader, global_step):
 
 def train(args, model):
     """ Train the model """
-    model.to(args.device)
+    # model.to(args.device)
     if args.local_rank in [-1, 0]:
         os.makedirs(args.output_dir, exist_ok=True)
         writer = SummaryWriter(log_dir=os.path.join("logs", args.name))
@@ -588,6 +590,44 @@ def train(args, model):
 
     # Prepare dataset
     train_loader, test_loader = get_loader_KD(args)
+
+    # mAp
+    # checkpoint_file = '/content/TrainedModels/best_acc_step_10500_acc_0.9152205350686913_checkpoint.pth'
+    # checkpoint_continue = torch.load(checkpoint_file)
+    # model.load_state_dict(checkpoint_continue['model_state_dict'], strict=True)
+    # model.to(args.device)
+
+    # model.eval()
+    # # teacher34_model.eval()
+    # class_acc = tnt.meter.APMeter()
+    # test_map = tnt.meter.mAPMeter()
+    # topacc = tnt.meter.ClassErrorMeter(topk=[1, 5], accuracy=False)
+    # conf_matrix = tnt.meter.ConfusionMeter( k=40,  normalized =False)
+    # class_acc.reset()
+    # test_map.reset()
+    # conf_matrix.reset()
+    # topacc.reset()
+    # with torch.no_grad():
+    #     # for inputs, labels in dataloaders_dict['test']:
+    #     for x1, x2, labels in test_loader:
+
+    #         x1 = x1.to(args.device)
+    #         x2 = x2.to(args.device)
+    #         labels = labels.to(args.device)
+    #         one_hot_labels = torch.nn.functional.one_hot(labels,num_classes=40)
+    #         one_hot_labels = one_hot_labels.to(args.device)
+    #         outputs = model(x1, x2)
+    #         _, preds = torch.max(outputs, 1)
+    #         probs = torch.nn.functional.softmax(outputs, dim=1)
+    #         class_acc.add(probs, one_hot_labels)
+    #         test_map.add(probs, one_hot_labels)
+    #         conf_matrix.add(probs, one_hot_labels)
+    #         topacc.add(probs, labels)
+            
+    # print('class accs are ', class_acc.value())
+    # print('mAp is equal to ',test_map.value())
+    # print('confusion matrix is ', conf_matrix.value())
+    # print('top acc value is ', topacc.value())
 
     # Prepare optimizer and scheduler
     optimizer = torch.optim.Adam(model.parameters(),
@@ -966,7 +1006,6 @@ def main():
     #   param.requires_grad_(True)
 
     for name, param in model.named_parameters():
-
         if 'last_fc' in name:
             param.requires_grad_(True)
         elif 'model_2' in name:
@@ -976,7 +1015,8 @@ def main():
         else:
             param.requires_grad_(False)
         # param.requires_grad_(True)
-
+    # device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    
     # Training
     train(args, model)
 
