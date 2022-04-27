@@ -583,6 +583,41 @@ def valid(args, model, writer, test_loader, global_step):
 #     logger.info("Best Accuracy: \t%f" % best_acc)
 #     logger.info("End Training!")
 
+def mAp(args, model, writer, test_loader, global_step):
+
+    model.eval()
+    class_acc = tnt.meter.APMeter()
+    test_map = tnt.meter.mAPMeter()
+    topacc = tnt.meter.ClassErrorMeter(topk=[1, 5], accuracy=False)
+    conf_matrix = tnt.meter.ConfusionMeter(k=40,  normalized =False)
+    class_acc.reset()
+    test_map.reset()
+    conf_matrix.reset()
+    topacc.reset()
+
+    with torch.no_grad():
+        for x1, x2, y in test_loader:
+
+            x1 = x1.to(args.device)
+            x2 = x2.to(args.device)
+            y = y.to(args.device)
+            one_hot_y = torch.nn.functional.one_hot(y, num_classes=40)
+            one_hot_y = one_hot_y.to(args.device)
+            outputs = model(x1, x2)
+            _, preds = torch.max(outputs, 1)
+            probs = torch.nn.functional.softmax(outputs, dim=1)
+            class_acc.add(probs, one_hot_y)
+            test_map.add(probs, one_hot_y)
+            conf_matrix.add(probs, one_hot_y)
+            topacc.add(probs, y)
+            
+    logger.info('class accs are {}'.format(class_acc.value()))
+    logger.info('mAp is equal to {}'.format(test_map.value()))
+    logger.info('confusion matrix is {}'.format(conf_matrix.value()))
+    logger.info('top 1th and 5th acc values are {}'.format(topacc.value()))
+
+    writer.add_scalar("test/mAp", scalar_value=test_map.value(), global_step=global_step)
+
 def train(args, model):
     """ Train the model """
     model.to(args.device)
@@ -742,6 +777,7 @@ def train(args, model):
                     # logger.info("Train Accuracy: %2.5f" % acc_train.val)
                     # logger.info("Train loss: %2.5f" % losses.val)
                     accuracy = valid(args, model, writer, test_loader, global_step)
+                    mAp(args, model, writer, test_loader, global_step)
 
                     if best_acc < accuracy:
                         save_model_complete(args, model, optimizer, accuracy, global_step)
