@@ -97,7 +97,7 @@ def get_loader_KD(args):
         # transforms.RandomResizedCrop((args.img_size, args.img_size), scale=(0.9, 1.0), ratio=(0.75, 1.3333333333)),
         transforms.RandomResizedCrop((args.img_size, args.img_size), scale=(0.8, 1.0), ratio=(0.75, 1.3333333333)),
         transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation(degrees =(0, 23)),
+        transforms.RandomRotation(degrees =(-23, 23)),
         transforms.RandomApply([
           transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8
         ),
