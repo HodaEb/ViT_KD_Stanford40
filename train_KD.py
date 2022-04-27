@@ -209,47 +209,46 @@ class EnsembleModel_resnext_vit(nn.Module):
 
         # second model
         model_2 = resnext50_32x4d(pretrained=True, progress=True)
-        # model_2.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
-        model_2.fc = nn.Identity()
-        # ckpt_2 = torch.load('/content/drive/MyDrive/ResNeXT/Copy of ckpt30.pth')
-        # model_2.load_state_dict(ckpt_2['model'], strict= True)
-        # logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
+        model_2.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
+        # model_2.fc = nn.Identity()
+
         lay4 = list(model_2.layer4)
         channel0 = ChannelAttention(2048, 16)
         spatial0 = SpatialAttention()
-        # bn0_2 = nn.BatchNorm2d(2048)
         channel1 = ChannelAttention(2048, 16)
         spatial1 = SpatialAttention()
-        # bn1_2 = nn.BatchNorm2d(2048)
         channel2 = ChannelAttention(2048, 16)
         spatial2 = SpatialAttention()
-        # bn2_2 = nn.BatchNorm2d(2048)
-        # layer4_new = [lay4[0], channel0, spatial0, bn0_2, lay4[1], channel1, spatial1, bn1_2, lay4[2], channel2, spatial2, bn2_2]
         layer4_new = [lay4[0], channel0, spatial0, lay4[1], channel1, spatial1, lay4[2], channel2, spatial2]
         model_2.layer4 = nn.Sequential(*layer4_new)
+
         ckpt_2 = torch.load(
-            '/content/drive/MyDrive/ResNext_cbam/TrainedModels/ResNext_cbam/Adam/_lr_1e-06/_wd_0.0/ckpt164_acc_0.8781633973121643.pth')
+            '/content/drive/MyDrive/Best_ResNext_cbam_map_92.75/ckpt34_acc_0.8830441236495972.pth')
         model_2.load_state_dict(ckpt_2['model'], strict=False)
         logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
-        self.model_2 = model_2
+
+        newmodel = torch.nn.Sequential(*(list(model_2.children())[:-1]))
+        print(newmodel)
+        self.model_2 = newmodel
         
 #         self.last_fc_1 = nn.Linear(2048 + 768, 500, True)
 #         self.relu_last = nn.Sigmoid()
 #         self.last_fc_2 = nn.Linear(500, 40, True)
 
         self.last_fc_1 = nn.Linear(2048 + 768, 512, True)
-        # try drop out
+        # try dropout
         self.relu_last = nn.Sigmoid()
         self.last_fc_2 = nn.Linear(512, 40, True)
 
 
     def forward(self, x1, x2):
         y1, _ = self.model_1(x1)
-        # print(y1.shape)
         y2 = self.model_2(x2)
-        # print(y2.shape,'   ',x2.shape)
-        y = torch.cat((y1, y2), dim=1)
-        # print(y.shape)
+
+
+        # logger.info(y1.shape)
+        # logger.info(y2.shape)
+        y = torch.cat((y1, y2.squeeze()), dim=1)
         # y = self.classifier(self.relu_last(y))
         y = self.last_fc_2(self.relu_last(self.last_fc_1(y)))
         # y = self.last_fc_2(self.last_fc_1(y))
@@ -586,7 +585,7 @@ def valid(args, model, writer, test_loader, global_step):
 
 def train(args, model):
     """ Train the model """
-    # model.to(args.device)
+    model.to(args.device)
     if args.local_rank in [-1, 0]:
         os.makedirs(args.output_dir, exist_ok=True)
         writer = SummaryWriter(log_dir=os.path.join("logs", args.name))
@@ -918,7 +917,7 @@ def main():
                         default="/content/", type=str,
                         help="The output directory where checkpoints will be written.")
     parser.add_argument("--input_dir",
-                        default="/content/drive/MyDrive/ViT_weights_layer11_to_end/best_acc_step_500_acc_0.9063629790310919_checkpoint.pth",
+                        default="/content/drive/MyDrive/vit_res_ens_95.19_map/best_acc_step_10500_acc_0.9152205350686913_checkpoint.pth",
                         type=str,
                         help="The output directory where checkpoints will be written.")
     # parser.add_argument("--student_input_dir",
@@ -997,6 +996,7 @@ def main():
 
     # Model & Tokenizer Setup
     # Prepare model
+
     config = CONFIGS[args.model_type]
 
     if args.dataset == "cifar10":
@@ -1007,6 +1007,7 @@ def main():
         num_classes = 100
 
     model = EnsembleModel_resnext_vit(args, config, args.img_size, zero_head=True, num_classes=num_classes)
+
     # for name, param in model.named_parameters():
     #   param.requires_grad_(True)
 
@@ -1020,7 +1021,6 @@ def main():
         else:
             param.requires_grad_(False)
         # param.requires_grad_(True)
-    # device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
     # Training
     train(args, model)
