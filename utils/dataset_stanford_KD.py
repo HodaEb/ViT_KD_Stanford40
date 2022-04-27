@@ -86,8 +86,21 @@ def get_loader_KD(args):
     if args.local_rank not in [-1, 0]:
         torch.distributed.barrier()
 
+#     teacher_transform_train = transforms.Compose([
+#         transforms.RandomResizedCrop((args.img_size, args.img_size), scale=(0.05, 1.0)),
+#         transforms.ToTensor(),
+#         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+#     ])
+
     teacher_transform_train = transforms.Compose([
-        transforms.RandomResizedCrop((args.img_size, args.img_size), scale=(0.05, 1.0)),
+        # transforms.RandomResizedCrop((args.img_size, args.img_size), scale=(0.05, 1.0)),
+        # transforms.RandomResizedCrop((args.img_size, args.img_size), scale=(0.9, 1.0), ratio=(0.75, 1.3333333333)),
+        transforms.RandomResizedCrop((args.img_size, args.img_size), scale=(0.8, 1.0), ratio=(0.75, 1.3333333333)),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(degrees =(0, 23)),
+        transforms.RandomApply([
+          transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8
+        ),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
     ])
@@ -96,6 +109,7 @@ def get_loader_KD(args):
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
     ])
+    
     # student_transform_train = transforms.Compose([
     #     transforms.Resize((400, 400)),
     #     transforms.RandomCrop((300, 300), padding=4),
@@ -126,23 +140,19 @@ def get_loader_KD(args):
 
     transforms.Resize((320, 320)),
     transforms.CenterCrop((320, 320)),
+        
     # transforms.RandomResizedCrop(size=(320, 320), scale=(0.6, 1.0), ratio=(0.75, 1.0)),
     transforms.RandomHorizontalFlip(),
-    # transforms.RandomVerticalFlip(),
-    # transforms.RandomRotation(degrees =(0, 10)),
-    transforms.RandomRotation(degrees =(0, 23)),
-    # transforms.RandomApply([
-    #   transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8
-    # ),
+    transforms.RandomRotation(degrees =(-23, 23)),
+    transforms.RandomApply([
+      transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)], p=0.8
+    ),
     transforms.RandomGrayscale(0.2),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
 
     student_transform_test = transforms.Compose([
-        # transforms.Resize((224, 224)),
-        # transforms.ToTensor(),
-        # transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 
         # transforms.Resize((224, 224)),
         # transforms.CenterCrop((224, 224)),
