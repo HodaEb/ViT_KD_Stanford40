@@ -209,8 +209,8 @@ class EnsembleModel_resnext_vit(nn.Module):
 
         # second model
         model_2 = resnext50_32x4d(pretrained=True, progress=True)
-        model_2.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
-        # model_2.fc = nn.Identity()
+        # model_2.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
+        model_2.fc = nn.Identity()
 
         lay4 = list(model_2.layer4)
         channel0 = ChannelAttention(2048, 16)
@@ -227,25 +227,24 @@ class EnsembleModel_resnext_vit(nn.Module):
         model_2.load_state_dict(ckpt_2['model'], strict=False)
         logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
 
-        newmodel = torch.nn.Sequential(*(list(model_2.children())[:-1]))
-        print(newmodel)
-        self.model_2 = newmodel
+        # newmodel = torch.nn.Sequential(*(list(model_2.children())[:-1]))
+        # print(newmodel)
+        # self.model_2 = newmodel
+        self.model_2 = model_2
         
-#         self.last_fc_1 = nn.Linear(2048 + 768, 500, True)
-#         self.relu_last = nn.Sigmoid()
-#         self.last_fc_2 = nn.Linear(500, 40, True)
-
-        self.last_fc_1 = nn.Linear(2048 + 768, 512, True)
-        # try dropout
+        self.last_fc_1 = nn.Linear(2048 + 768, 500, True)
         self.relu_last = nn.Sigmoid()
-        self.last_fc_2 = nn.Linear(512, 40, True)
+        self.last_fc_2 = nn.Linear(500, 40, True)
+
+        # self.last_fc_1 = nn.Linear(2048 + 768, 512, True)
+        # # try dropout
+        # self.relu_last = nn.Sigmoid()
+        # self.last_fc_2 = nn.Linear(512, 40, True)
 
 
     def forward(self, x1, x2):
         y1, _ = self.model_1(x1)
         y2 = self.model_2(x2)
-
-
         # logger.info(y1.shape)
         # logger.info(y2.shape)
         y = torch.cat((y1, y2.squeeze()), dim=1)
@@ -717,6 +716,7 @@ def train(args, model):
     accuracy_train = torchmetrics.Accuracy().cuda()
     accuracy_train_teacher = torchmetrics.Accuracy().cuda()
     loss_fct = nn.CrossEntropyLoss()
+    mAp(args, model, writer, test_loader, -1)
     # global_step, best_acc = 0, 0
     while True:
         model.train()
@@ -1043,6 +1043,12 @@ def main():
         num_classes = 100
 
     model = EnsembleModel_resnext_vit(args, config, args.img_size, zero_head=True, num_classes=num_classes)
+    # checkpoint_file = '/content/drive/MyDrive/vit_res_ens_95.19_map/best_acc_step_10500_acc_0.9152205350686913_checkpoint.pth'
+    # checkpoint = torch.load(checkpoint_file)
+    # if 'model_state_dict' in checkpoint.keys():
+    #     model.load_state_dict(checkpoint['model_state_dict'], strict=True)
+    # else:
+    #     model.load_state_dict(checkpoint, strict=True)
 
     # for name, param in model.named_parameters():
     #   param.requires_grad_(True)
