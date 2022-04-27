@@ -233,9 +233,14 @@ class EnsembleModel_resnext_vit(nn.Module):
         logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
         self.model_2 = model_2
         
-        self.last_fc_1 = nn.Linear(2048 + 768, 500, True)
+#         self.last_fc_1 = nn.Linear(2048 + 768, 500, True)
+#         self.relu_last = nn.Sigmoid()
+#         self.last_fc_2 = nn.Linear(500, 40, True)
+
+        self.last_fc_1 = nn.Linear(2048 + 768, 512, True)
+        # try drop out
         self.relu_last = nn.Sigmoid()
-        self.last_fc_2 = nn.Linear(500, 40, True)
+        self.last_fc_2 = nn.Linear(512, 40, True)
 
 
     def forward(self, x1, x2):
