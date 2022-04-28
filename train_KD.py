@@ -193,6 +193,68 @@ class EnsembleModel(nn.Module):
 #     # y = torch.stack((y1, y2), dim = 1).mean(dim = 1)
 #     return y
 
+# class EnsembleModel_resnext_vit(nn.Module):
+#     def __init__(self, args, config, img_size=224, zero_head=True, num_classes=40):
+#         super().__init__()
+#         self.k = 2
+#         # first model
+#         model_1 = VisionTransformer(config, img_size, zero_head=True, num_classes=num_classes)
+#         checkpoint_file = args.input_dir
+#         checkpoint = torch.load(checkpoint_file)
+#         if 'model_state_dict' in checkpoint.keys():
+#             model_1.load_state_dict(checkpoint['model_state_dict'], strict=False)
+#         else:
+#             model_1.load_state_dict(checkpoint, strict=False)
+#         self.model_1 = model_1
+
+#         # second model
+#         model_2 = resnext50_32x4d(pretrained=True, progress=True)
+#         # model_2.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
+#         model_2.fc = nn.Identity()
+
+#         lay4 = list(model_2.layer4)
+#         channel0 = ChannelAttention(2048, 16)
+#         spatial0 = SpatialAttention()
+#         channel1 = ChannelAttention(2048, 16)
+#         spatial1 = SpatialAttention()
+#         channel2 = ChannelAttention(2048, 16)
+#         spatial2 = SpatialAttention()
+#         layer4_new = [lay4[0], channel0, spatial0, lay4[1], channel1, spatial1, lay4[2], channel2, spatial2]
+#         model_2.layer4 = nn.Sequential(*layer4_new)
+
+#         ckpt_2 = torch.load(
+#             '/content/drive/MyDrive/Best_ResNext_cbam_map_92.75/ckpt34_acc_0.8830441236495972.pth')
+#         model_2.load_state_dict(ckpt_2['model'], strict=False)
+#         logger.info('acc of the second model is {}.'.format(ckpt_2['acc']))
+
+#         # newmodel = torch.nn.Sequential(*(list(model_2.children())[:-1]))
+#         # print(newmodel)
+#         # self.model_2 = newmodel
+#         self.model_2 = model_2
+        
+#         self.last_fc_1 = nn.Linear(2048 + 768, 500, True)
+#         self.relu_last = nn.Sigmoid()
+#         self.last_fc_2 = nn.Linear(500, 40, True)
+
+#         # self.last_fc_1 = nn.Linear(2048 + 768, 512, True)
+#         # # try dropout
+#         # self.relu_last = nn.Sigmoid()
+#         # self.last_fc_2 = nn.Linear(512, 40, True)
+
+
+#     def forward(self, x1, x2):
+#         y1, _ = self.model_1(x1)
+#         y2 = self.model_2(x2)
+#         # logger.info(y1.shape)
+#         # logger.info(y2.shape)
+#         y = torch.cat((y1, y2.squeeze()), dim=1)
+#         # y = self.classifier(self.relu_last(y))
+#         y = self.last_fc_2(self.relu_last(self.last_fc_1(y)))
+#         # y = self.last_fc_2(self.last_fc_1(y))
+
+#         # y = torch.stack((y1, y2), dim = 1).mean(dim = 1)
+#         return y
+
 class EnsembleModel_resnext_vit(nn.Module):
     def __init__(self, args, config, img_size=224, zero_head=True, num_classes=40):
         super().__init__()
@@ -209,8 +271,8 @@ class EnsembleModel_resnext_vit(nn.Module):
 
         # second model
         model_2 = resnext50_32x4d(pretrained=True, progress=True)
-        # model_2.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
-        model_2.fc = nn.Identity()
+        model_2.fc = nn.Linear(in_features=2048, out_features=40, bias=True)
+        # model_2.fc = nn.Identity()
 
         lay4 = list(model_2.layer4)
         channel0 = ChannelAttention(2048, 16)
@@ -232,9 +294,9 @@ class EnsembleModel_resnext_vit(nn.Module):
         # self.model_2 = newmodel
         self.model_2 = model_2
         
-        self.last_fc_1 = nn.Linear(2048 + 768, 500, True)
-        self.relu_last = nn.Sigmoid()
-        self.last_fc_2 = nn.Linear(500, 40, True)
+        # self.last_fc_1 = nn.Linear(2048 + 768, 500, True)
+        # self.relu_last = nn.Sigmoid()
+        # self.last_fc_2 = nn.Linear(500, 40, True)
 
         # self.last_fc_1 = nn.Linear(2048 + 768, 512, True)
         # # try dropout
@@ -245,14 +307,10 @@ class EnsembleModel_resnext_vit(nn.Module):
     def forward(self, x1, x2):
         y1, _ = self.model_1(x1)
         y2 = self.model_2(x2)
-        # logger.info(y1.shape)
-        # logger.info(y2.shape)
-        y = torch.cat((y1, y2.squeeze()), dim=1)
-        # y = self.classifier(self.relu_last(y))
-        y = self.last_fc_2(self.relu_last(self.last_fc_1(y)))
-        # y = self.last_fc_2(self.last_fc_1(y))
+        # y = torch.cat((y1, y2.squeeze()), dim=1)
+        # y = self.last_fc_2(self.relu_last(self.last_fc_1(y)))
 
-        # y = torch.stack((y1, y2), dim = 1).mean(dim = 1)
+        y = torch.stack((y1, y2), dim = 1).mean(dim = 1)
         return y
 
 class AverageMeter(object):
@@ -1054,15 +1112,15 @@ def main():
     #   param.requires_grad_(True)
 
     for name, param in model.named_parameters():
-        if 'last_fc' in name:
-            param.requires_grad_(True)
-        elif 'model_2' in name:
-            param.requires_grad_(False)
-        elif 'model_1' in name:
-            param.requires_grad_(False)
-        else:
-            param.requires_grad_(False)
-        # param.requires_grad_(True)
+        # if 'last_fc' in name:
+        #     param.requires_grad_(True)
+        # elif 'model_2' in name:
+        #     param.requires_grad_(False)
+        # elif 'model_1' in name:
+        #     param.requires_grad_(False)
+        # else:
+        #     param.requires_grad_(False)
+        param.requires_grad_(True)
     
     # Training
     train(args, model)
