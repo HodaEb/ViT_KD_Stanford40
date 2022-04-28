@@ -953,7 +953,7 @@ def main():
                         default="/content/", type=str,
                         help="The output directory where checkpoints will be written.")
     parser.add_argument("--input_dir",
-                        default="/content/drive/MyDrive/vit_res_ens_95.19_map/best_acc_step_10500_acc_0.9152205350686913_checkpoint.pth",
+                        default="/content/drive/MyDrive/vit_transforms_map_94.98/best_acc_step_300_acc_0.9101590744757773_checkpoint.pth",
                         type=str,
                         help="The output directory where checkpoints will be written.")
     # parser.add_argument("--student_input_dir",
