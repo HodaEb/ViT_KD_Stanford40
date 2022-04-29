@@ -62,13 +62,13 @@ def visualize_model(args, model, testloader, class_names, num_images=4):
                 if j > x1.size()[0]:
                     return
                 images_so_far += 1
-                ax.set_title('predicted: {}'.format(class_names[preds[j]]))
+                ax.set_title('p:{}\ng:{}'.format(class_names[preds[j]], class_names[labels[j]]), fontsize='small', loc='left')
                 image = np.moveaxis(np.asarray(x1.data[j].squeeze().cpu().detach()), 0, -1)
                 # np.asarray
                 im = ax.imshow(image)
             # plt.show()
             plt.savefig("/content/myimage{}_{}.png".format(i,j))
-            return
+        return
 
 
 def loss_fn_kd(outputs, labels, teacher_outputs, alpha, T):
