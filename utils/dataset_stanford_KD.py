@@ -192,5 +192,6 @@ def get_loader_KD(args):
                              batch_size=args.eval_batch_size,
                              num_workers=0,
                              pin_memory=True) if testset is not None else None
-
-    return train_loader, test_loader
+    class_names = trainset.classes
+    
+    return train_loader, test_loader, class_names
