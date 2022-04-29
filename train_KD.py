@@ -33,6 +33,43 @@ import torchmetrics
 
 logger = logging.getLogger(__name__)
 
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+def visualize_model(args, model, testloader, class_names, num_images=4):
+    model.eval()
+    images_so_far = 0
+    # fig = plt.figure()
+
+    with torch.no_grad():
+        for i, (x1, x2, labels) in enumerate(testloader):
+            
+            x1 = x1.to(args.device)
+            x2 = x2.to(args.device)
+            labels = labels.to(args.device)
+
+            outputs = model(x1, x2)
+            _, preds = torch.max(outputs, 1)
+
+            fig, axs = plt.subplots(2, 2)
+
+            # for j in range(inputs.size()[0]): 
+            # print(axs)
+            for j, ax in enumerate(axs.flat):
+                ax.axis('off')
+                # print(j,ax)
+                if j > x1.size()[0]:
+                    return
+                images_so_far += 1
+                ax.set_title('predicted: {}'.format(class_names[preds[j]]))
+                image = np.moveaxis(np.asarray(x1.data[j].squeeze().cpu().detach()), 0, -1)
+                # np.asarray
+                im = ax.imshow(image)
+            # plt.show()
+            plt.savefig("/content/myimage{}_{}.png".format(i,j))
+            return
+
 
 def loss_fn_kd(outputs, labels, teacher_outputs, alpha, T):
     """
@@ -685,7 +722,8 @@ def train(args, model):
     args.train_batch_size = args.train_batch_size // args.gradient_accumulation_steps
 
     # Prepare dataset
-    train_loader, test_loader = get_loader_KD(args)
+    train_loader, test_loader, class_names = get_loader_KD(args)
+
 
     # mAp
     # checkpoint_file = '/content/TrainedModels/best_acc_step_10500_acc_0.9152205350686913_checkpoint.pth'
@@ -737,6 +775,9 @@ def train(args, model):
     # checkpoint_file = args.student_input_dir
     # checkpoint_continue = torch.load(checkpoint_file)
     # optimizer.load_state_dict(checkpoint_continue['optimizer_state_dict'])
+
+
+    visualize_model(args, model, test_loader, class_names, num_images=1)
     
 
     t_total = args.num_steps
